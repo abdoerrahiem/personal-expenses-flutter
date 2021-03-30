@@ -1,11 +1,17 @@
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
+import 'package:intl/date_symbol_data_local.dart';
 
 import './widgets/transaction_list.dart';
 import './widgets/new_transaction.dart';
+import './widgets/chart.dart';
 import './models/transaction.dart';
 
-void main() {
-  runApp(MyApp());
+Future<void> main() async {
+  Intl.defaultLocale = 'id_ID';
+
+  WidgetsFlutterBinding.ensureInitialized();
+  await initializeDateFormatting('id_ID', null).then((_) => runApp(MyApp()));
 }
 
 class MyApp extends StatelessWidget {
@@ -60,12 +66,22 @@ class _MyHomePageState extends State<MyHomePage> {
     // )
   ];
 
-  void _addNewTransaction(String title, int amount) {
+  List<Transaction> get _recentTransactions {
+    return _transactions.where((transaction) {
+      return transaction.date.isAfter(
+        DateTime.now().subtract(
+          Duration(days: 7),
+        ),
+      );
+    }).toList();
+  }
+
+  void _addNewTransaction(String title, int amount, DateTime chosenDate) {
     final newTransaction = Transaction(
       id: DateTime.now().toString(),
       title: title,
       amount: amount,
-      date: DateTime.now(),
+      date: chosenDate,
     );
 
     setState(() {
@@ -79,6 +95,12 @@ class _MyHomePageState extends State<MyHomePage> {
         builder: (_) {
           return NewTransaction(addNewTransaction: _addNewTransaction);
         });
+  }
+
+  void _deleteTransaction(String id) {
+    setState(() {
+      _transactions.removeWhere((e) => e.id == id);
+    });
   }
 
   @override
@@ -97,14 +119,11 @@ class _MyHomePageState extends State<MyHomePage> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Container(
-              width: double.infinity,
-              child: Card(
-                child: Text('Chart'),
-                color: Colors.blue,
-              ),
+            Chart(recentTransactions: _recentTransactions),
+            TransactionList(
+              transactions: _transactions,
+              deleteTransaction: _deleteTransaction,
             ),
-            TransactionList(transactions: _transactions),
           ],
         ),
       ),
